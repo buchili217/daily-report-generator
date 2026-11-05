@@ -1,23 +1,4 @@
 services:
-  postgres:
-    image: postgres:17
-    container_name: daily-report-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app_dev_password
-      POSTGRES_DB: daily_report
-      TZ: Asia/Shanghai
-    ports:
-      - "5432:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d daily_report"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   redis:
     image: redis:7-alpine
     container_name: daily-report-redis
@@ -28,5 +9,4 @@ services:
       - redisdata:/data
 
 volumes:
-  pgdata:
   redisdata:

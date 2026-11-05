@@ -7,7 +7,7 @@
 | 层次 | 选型 |
 |---|---|
 | 后端 | Python 3.11 + FastAPI |
-| 数据 | PostgreSQL 17 + Redis 7 |
+| 数据 | SQLite 3（文件数据库）+ Redis 7 |
 | 任务 | Celery（Worker + Beat） |
 | 大模型 | 统一 LLMProvider 接口，默认国内模型 |
 | 前端 | Vue 3 + TypeScript（管理端）、飞书消息卡片 + H5（员工端） |
@@ -22,7 +22,8 @@
 ├── docs/                 # 课程设计文档与调研资料
 ├── specs/                # SDD 规格：spec / plan / tasks
 │   └── 000-template/     # 模板
-├── docker-compose.yml    # 本地开发环境（PostgreSQL + Redis）
+├── docker-compose.yml    # 本地开发环境（Redis）
+├── data/                 # SQLite 数据库文件（不入库）
 ├── proposal.md           # 项目提案
 ├── README.md
 └── CONTRIBUTING.md       # 分支、提交与 PR 规范
@@ -41,13 +42,14 @@ docker compose ps
 
 | 服务 | 地址 | 账号 |
 |---|---|---|
-| PostgreSQL | `localhost:5432/daily_report` | `app` / `app_dev_password` |
 | Redis | `localhost:6379` | 无密码 |
+
+数据库使用 SQLite，文件位于 `data/daily_report.db`，首次启动自动创建，无需额外容器。
 
 连接数据库：
 
 ```bash
-docker exec -it daily-report-db psql -U app -d daily_report
+sqlite3 data/daily_report.db
 ```
 
 ## 文档索引
