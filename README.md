@@ -6,7 +6,7 @@
 
 | 层次 | 选型 |
 |---|---|
-| 后端 | Python 3.11 + FastAPI |
+| 后端 | Python 3.12+ + FastAPI |
 | 数据 | SQLite 3（文件数据库）+ Redis 7 |
 | 任务 | Celery（Worker + Beat） |
 | 大模型 | 统一 LLMProvider 接口，默认国内模型 |
