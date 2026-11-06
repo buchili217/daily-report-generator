@@ -89,8 +89,8 @@
 ## 8. 技术方案概要
 
 - **架构**：模块化单体 + 适配器模式 + 异步任务队列；
-- **后端**：Python 3.11 + FastAPI + SQLAlchemy 2.0；
-- **数据**：PostgreSQL（业务与原始采集数据）+ Redis（缓存与队列）；
+- **后端**：Python 3.12+ + FastAPI + SQLAlchemy 2.0；
+- **数据**：SQLite（业务与原始采集数据，文件数据库）+ Redis（缓存与队列）；
 - **任务**：Celery Worker + Beat（定时采集与生成）；
 - **大模型**：统一 `LLMProvider` 接口，默认国内模型，可切换；
 - **员工端**：飞书消息卡片 + H5；**管理端**：Vue 3 + TypeScript；
