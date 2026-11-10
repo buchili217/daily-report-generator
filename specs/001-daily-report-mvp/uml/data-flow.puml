@@ -1,0 +1,54 @@
+@startuml data-flow
+top to bottom direction
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam rectangle {
+  BackgroundColor #FFF8E7
+  BorderColor #B8860B
+}
+skinparam database {
+  BackgroundColor #EEF7EE
+  BorderColor #4E8B4E
+}
+
+agent "飞书开放平台\n(日历/文档/任务)" as FeishuIn
+agent "GitHub API" as GitHub
+agent "飞书消息服务\n(机器人/卡片)" as FeishuOut
+agent "一线员工" as Emp
+agent "团队负责人" as Lead
+
+rectangle "P1 采集\n增量游标 / 限流 / 重试" as P1
+rectangle "P2 清洗与聚合\n去重 / 时间窗过滤" as P2
+rectangle "P3 协作归属\n置信度分级" as P3
+rectangle "P4 日报生成\nLLM + 模板" as P4
+rectangle "P5 校验与降级\nSchema / 来源引用" as P5
+rectangle "P6 推送\n飞书卡片 / 邮件(P2)" as P6
+rectangle "P7 团队汇总\n阻塞项识别" as P7
+
+database "D1 work_event\n+ event_participant" as D1
+database "D2 report / report_item\n/ report_version" as D2
+database "D3 push_record" as D3
+database "D4 sync_cursor" as D4
+database "D5 audit_log" as D5
+
+FeishuIn --> P1
+GitHub --> P1 : commit / PR
+P1 --> D1 : 标准化事件
+P1 --> D4 : 游标 / ETag
+D1 --> P2
+P1 --> P2 : 事件流
+P2 --> P3
+P3 --> P4
+P4 --> P5
+Emp --> P5 : 编辑 / 确认
+P5 --> D2 : 草稿条目
+D2 --> P6 : 已提交日报
+Lead --> P7
+D2 --> P7
+P7 --> P6 : 团队日报
+P6 --> FeishuOut : 卡片推送
+P6 --> D3 : 幂等记录
+P5 --> D5
+P6 --> D5
+P7 --> D5
+@enduml
