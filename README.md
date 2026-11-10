@@ -20,7 +20,7 @@
 ```
 .
 ├── docs/                 # 课程设计文档与调研资料
-├── specs/                # SDD 规格：spec / plan / tasks
+├── specs/                # SDD 规格：proposal / design / tasks
 │   └── 000-template/     # 模板
 ├── docker-compose.yml    # 本地开发环境（Redis）
 ├── data/                 # SQLite 数据库文件（不入库）
