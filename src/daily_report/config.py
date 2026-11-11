@@ -53,4 +53,4 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    return Settings()  # type: ignore[call-arg]  # 由环境变量提供 APP_SECRET_KEY
