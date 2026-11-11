@@ -1,0 +1,86 @@
+from __future__ import annotations
+
+import asyncio
+from datetime import date
+
+from fastapi.testclient import TestClient
+
+from daily_report.api import create_app
+from daily_report.auth import create_session_token
+from daily_report.config import Settings
+from daily_report.pipeline import PipelineService
+
+DAY = date(2026, 11, 11)
+
+
+def _client(service: PipelineService, settings: Settings) -> TestClient:
+    return TestClient(create_app(service, settings))
+
+
+def _auth(member_id: int, settings: Settings) -> dict[str, str]:
+    token = create_session_token(member_id, settings.app_secret_key)
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_health_and_unauthorized(service: PipelineService, settings: Settings) -> None:
+    client = _client(service, settings)
+    assert client.get("/api/health").json()["status"] == "ok"
+    assert client.get("/api/reports/2026-11-11").status_code == 401
+
+
+def test_report_flow(
+    service: PipelineService, settings: Settings, seeded: tuple[int, int]
+) -> None:
+    member_id, team_id = seeded
+    asyncio.run(service.run_member_pipeline(member_id, DAY))
+    client = _client(service, settings)
+    headers = _auth(member_id, settings)
+
+    report = client.get("/api/reports/2026-11-11", headers=headers).json()
+    assert report["status"] == "draft"
+    assert len(report["sections"]["done"]) == 4
+
+    updated = client.put(
+        f"/api/reports/{report['id']}/items",
+        headers=headers,
+        json={"items": [{"section": "done", "content": "手工整理的成果"}]},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["sections"]["done"][0]["content"] == "手工整理的成果"
+
+    submitted = client.post(f"/api/reports/{report['id']}/submit", headers=headers)
+    assert submitted.status_code == 200
+    assert submitted.json()["status"] == "submitted"
+
+    pushed = client.post(f"/api/reports/{report['id']}/push", headers=headers)
+    assert pushed.status_code == 200
+    assert pushed.json()["success"] is True
+
+    digest = client.get(
+        f"/api/teams/{team_id}/digest?report_date=2026-11-11", headers=headers
+    )
+    assert digest.status_code == 200
+    assert "手工整理的成果" in digest.json()["content_md"]
+
+
+def test_report_forbidden_for_other_member(
+    service: PipelineService, settings: Settings, seeded: tuple[int, int]
+) -> None:
+    member_id, _ = seeded
+    asyncio.run(service.run_member_pipeline(member_id, DAY))
+    client = _client(service, settings)
+    report = client.get("/api/reports/2026-11-11", headers=_auth(member_id, settings)).json()
+    response = client.post(f"/api/reports/{report['id']}/submit", headers=_auth(2, settings))
+    assert response.status_code == 403
+
+
+def test_oauth_callback_creates_member(
+    service: PipelineService, settings: Settings
+) -> None:
+    client = _client(service, settings)
+    response = client.get("/api/oauth/feishu/callback", params={"code": "ou_demo"})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["token"]
+    again = client.get("/api/oauth/feishu/callback", params={"code": "ou_demo"})
+    assert again.json()["member_id"] == body["member_id"]
