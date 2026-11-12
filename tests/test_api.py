@@ -114,3 +114,42 @@ def test_generate_endpoint_creates_report(
     report = client.get("/api/reports/2026-11-14", headers=headers).json()
     assert report["status"] == "draft"
     assert len(report["sections"]["done"]) == 4
+
+
+def test_feishu_login_url_requires_app_id(
+    service: PipelineService, settings: Settings
+) -> None:
+    client = _client(service, settings)
+    assert client.get("/api/oauth/feishu/login-url").status_code == 422
+
+
+def test_feishu_login_url_contains_redirect(
+    service: PipelineService, settings: Settings
+) -> None:
+    real_config = settings.model_copy(
+        update={
+            "feishu_app_id": "cli_test",
+            "feishu_app_secret": "secret",
+            "feishu_redirect_uri": "http://localhost:8000/api/oauth/feishu/callback",
+        }
+    )
+    client = _client(service, real_config)
+    body = client.get("/api/oauth/feishu/login-url").json()
+    assert "app_id=cli_test" in body["url"]
+    assert "open-apis/authen/v1/authorize" in body["url"]
+    assert "redirect_uri=http%3A%2F%2Flocalhost%3A8000" in body["url"]
+
+
+def test_feishu_callback_redirects_to_frontend(
+    service: PipelineService, settings: Settings, seeded: tuple[int, int]
+) -> None:
+    client = TestClient(create_app(service, settings))
+    response = client.get(
+        "/api/oauth/feishu/callback",
+        params={"code": "ou_1", "redirect": "true"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    location = response.headers["location"]
+    assert location.startswith("http://localhost:5173/login?token=")
+    assert "name=" in location

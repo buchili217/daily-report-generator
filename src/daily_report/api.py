@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import json
+import secrets
 from collections.abc import Iterator
 from datetime import date
+from urllib.parse import quote
 
-from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -128,8 +131,25 @@ def create_app(
             "degraded": result.degraded,
         }
 
+    @app.get("/api/oauth/feishu/login-url")
+    def feishu_login_url() -> dict:
+        if not settings.feishu_app_id:
+            raise HTTPException(status_code=422, detail="FEISHU_APP_ID 未配置")
+        state = secrets.token_urlsafe(8)
+        url = (
+            f"{settings.feishu_api_base}/open-apis/authen/v1/authorize"
+            f"?app_id={quote(settings.feishu_app_id)}"
+            f"&redirect_uri={quote(settings.feishu_redirect_uri, safe='')}"
+            f"&state={state}"
+        )
+        return {"url": url, "state": state}
+
     @app.get("/api/oauth/feishu/callback")
-    async def feishu_callback(code: str, session: Session = Depends(get_session)) -> dict:
+    async def feishu_callback(
+        code: str,
+        redirect: bool = False,
+        session: Session = Depends(get_session),
+    ) -> Response:
         if settings.mock_mode:
             open_id, name, email = code, code, None
         else:
@@ -156,7 +176,13 @@ def create_app(
             open_id=open_id, name=name, email=email
         )
         token = create_session_token(member.id, settings.app_secret_key)
-        return {"token": token, "member_id": member.id, "name": member.name}
+        if redirect:
+            target = (
+                f"{settings.frontend_base_url.rstrip('/')}/login"
+                f"?token={quote(token)}&name={quote(member.name)}"
+            )
+            return RedirectResponse(target, status_code=303)
+        return JSONResponse({"token": token, "member_id": member.id, "name": member.name})
 
     @app.get("/api/reports/{report_date}")
     def get_report(

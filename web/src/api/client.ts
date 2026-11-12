@@ -68,6 +68,15 @@ export function loginWithCode(code: string): Promise<LoginResult> {
   return request<LoginResult>(`/oauth/feishu/callback?code=${encodeURIComponent(code)}`);
 }
 
+export interface LoginUrl {
+  url: string;
+  state: string;
+}
+
+export function fetchLoginUrl(): Promise<LoginUrl> {
+  return request<LoginUrl>("/oauth/feishu/login-url");
+}
+
 export function fetchMe(): Promise<Me> {
   return request<Me>("/me");
 }

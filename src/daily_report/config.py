@@ -31,6 +31,7 @@ class Settings(BaseSettings):
         default="http://localhost:8000/api/oauth/feishu/callback", alias="FEISHU_REDIRECT_URI"
     )
     feishu_api_base: str = Field(default="https://open.feishu.cn", alias="FEISHU_API_BASE")
+    frontend_base_url: str = Field(default="http://localhost:5173", alias="FRONTEND_BASE_URL")
 
     github_token: str = Field(default="", alias="GITHUB_TOKEN")
     github_api_base: str = Field(default="https://api.github.com", alias="GITHUB_API_BASE")
