@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterator
+from datetime import date
 
 from fastapi import Depends, FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -81,6 +82,51 @@ def create_app(
     @app.get("/api/health")
     def health() -> dict:
         return {"status": "ok", "mock_mode": settings.mock_mode}
+
+    @app.get("/api/me")
+    def me(
+        member_id: int = Depends(current_member_id),
+        session: Session = Depends(get_session),
+    ) -> dict:
+        member = MemberRepository(session).get(member_id)
+        if member is None:
+            raise HTTPException(status_code=404, detail="member not found")
+        teams = TeamRepository(session).list_for_member(member_id)
+        return {
+            "id": member.id,
+            "name": member.name,
+            "email": member.email,
+            "teams": [
+                {
+                    "id": team.id,
+                    "name": team.name,
+                    "role": role,
+                    "is_lead": team.lead_member_id == member_id,
+                }
+                for team, role in teams
+            ],
+        }
+
+    @app.post("/api/reports/{report_date}/generate")
+    async def generate_report(
+        report_date: str,
+        member_id: int = Depends(current_member_id),
+    ) -> dict:
+        try:
+            target = date.fromisoformat(report_date)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="invalid date") from exc
+        result = await service.run_member_pipeline(member_id, target)
+        if result.status == "failed":
+            raise HTTPException(status_code=502, detail=result.error or "generate failed")
+        return {
+            "status": result.status,
+            "report_id": result.report_id,
+            "events": result.events,
+            "inserted": result.inserted,
+            "pushed": result.pushed,
+            "degraded": result.degraded,
+        }
 
     @app.get("/api/oauth/feishu/callback")
     async def feishu_callback(code: str, session: Session = Depends(get_session)) -> dict:

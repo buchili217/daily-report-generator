@@ -69,6 +69,15 @@ class TeamRepository:
     def get(self, team_id: int) -> Team | None:
         return self.session.get(Team, team_id)
 
+    def list_for_member(self, member_id: int) -> list[tuple[Team, str]]:
+        rows = self.session.execute(
+            select(Team, TeamMember.role)
+            .join(TeamMember, TeamMember.team_id == Team.id)
+            .where(TeamMember.member_id == member_id)
+            .order_by(Team.id)
+        ).all()
+        return [(team, role) for team, role in rows]
+
     def add_member(self, team_id: int, member_id: int, role: str = "member") -> None:
         self.session.add(TeamMember(team_id=team_id, member_id=member_id, role=role))
         self.session.flush()

@@ -84,3 +84,33 @@ def test_oauth_callback_creates_member(
     assert body["token"]
     again = client.get("/api/oauth/feishu/callback", params={"code": "ou_demo"})
     assert again.json()["member_id"] == body["member_id"]
+
+
+def test_me_endpoint_returns_teams(
+    service: PipelineService, settings: Settings, seeded: tuple[int, int]
+) -> None:
+    member_id, team_id = seeded
+    client = _client(service, settings)
+    body = client.get("/api/me", headers=_auth(member_id, settings)).json()
+    assert body["name"] == "张三"
+    assert body["teams"] == [
+        {"id": team_id, "name": "研发一组", "role": "lead", "is_lead": True}
+    ]
+
+
+def test_generate_endpoint_creates_report(
+    service: PipelineService, settings: Settings, seeded: tuple[int, int]
+) -> None:
+    member_id, _ = seeded
+    client = _client(service, settings)
+    headers = _auth(member_id, settings)
+    response = client.post("/api/reports/2026-11-14/generate", headers=headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "success"
+    assert body["report_id"] is not None
+    assert body["events"] == 4
+
+    report = client.get("/api/reports/2026-11-14", headers=headers).json()
+    assert report["status"] == "draft"
+    assert len(report["sections"]["done"]) == 4
