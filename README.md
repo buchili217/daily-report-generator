@@ -62,9 +62,12 @@ uv run pytest -q
 
 ## 管理端（Vue 3 + TypeScript）
 
-```bash
+PowerShell（Windows 默认）：
+
+```powershell
 # 终端 1：后端（Mock 模式）
-export APP_SECRET_KEY=demo-secret MOCK_MODE=true
+$env:APP_SECRET_KEY = "demo-secret"
+$env:MOCK_MODE = "true"
 uv run python -m daily_report serve
 
 # 终端 2：前端
@@ -72,6 +75,19 @@ cd web
 npm install
 npm run dev
 ```
+
+bash / Git Bash / macOS / Linux：
+
+```bash
+export APP_SECRET_KEY=demo-secret MOCK_MODE=true
+uv run python -m daily_report serve
+
+cd web
+npm install
+npm run dev
+```
+
+> 端口 8000 已被占用时（`winerror 10048`），说明后端已在运行，直接用现有实例即可；需要重启时先结束占用进程：`Get-NetTCPConnection -LocalPort 8000 | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }`。
 
 打开 `http://localhost:5173`，用 `ou_1`（张三）或 `ou_2`（李四）登录。页面能力：
 
@@ -115,6 +131,7 @@ sqlite3 data/daily_report.db
 | [specs/001-daily-report-mvp/tasks.md](specs/001-daily-report-mvp/tasks.md) | v1 任务清单与验收标准 |
 | [docs/演示脚本.md](docs/演示脚本.md) | v1 Mock 模式演示步骤 |
 | [docs/验收核对表.md](docs/验收核对表.md) | proposal 成功标准逐条核对 |
+| [docs/验收测试代理.md](docs/验收测试代理.md) | 验收测试子代理的流程与判定规则 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 协作规范 |
 
 ## 协作
