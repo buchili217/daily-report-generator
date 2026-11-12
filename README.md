@@ -24,6 +24,7 @@
 │   ├── 000-template/     # 模板
 │   └── 001-daily-report-mvp/  # v1 规格与 UML 附件
 ├── src/daily_report/     # v1 源码（采集/生成/推送/编排）
+├── web/                  # Vue 3 + TypeScript 管理端
 ├── tests/                # 单元与集成测试
 ├── migrations/           # Alembic 迁移
 ├── docker-compose.yml    # 本地开发环境（Redis）
@@ -58,6 +59,26 @@ uv run ruff check .
 uv run mypy src
 uv run pytest -q
 ```
+
+## 管理端（Vue 3 + TypeScript）
+
+```bash
+# 终端 1：后端（Mock 模式）
+export APP_SECRET_KEY=demo-secret MOCK_MODE=true
+uv run python -m daily_report serve
+
+# 终端 2：前端
+cd web
+npm install
+npm run dev
+```
+
+打开 `http://localhost:5173`，用 `ou_1`（张三）或 `ou_2`（李四）登录。页面能力：
+
+- **我的日报**：按日期查看草稿、生成当日日报、编辑四个段落、保存、提交、推送；
+- **团队汇总**：负责人选择团队与日期，查看汇总（不含排名）。
+
+生产构建：`cd web && npm run build`，产物在 `web/dist/`，可用 Nginx 托管并反向代理 `/api` 到后端。
 
 ## 本地启动
 
