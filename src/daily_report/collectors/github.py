@@ -33,12 +33,14 @@ class GitHubCollector:
         repos: list[str],
         api_base: str = "https://api.github.com",
         etags: dict[str, str] | None = None,
+        login: str = "",
     ) -> None:
         self._http = http
         self._token = token
         self._repos = repos
         self._api_base = api_base.rstrip("/")
         self._etags = dict(etags or {})
+        self._login = login.strip().lower()
 
     def _headers(self, etag: str | None = None) -> dict[str, str]:
         headers = {"Accept": "application/vnd.github+json"}
@@ -63,7 +65,7 @@ class GitHubCollector:
     async def collect(self, member: Member, window: TimeWindow) -> CollectResult:
         events: list[CollectedEvent] = []
         next_etags: dict[str, str] = {}
-        login = (member.email or "").split("@")[0].lower()
+        login = self._login or (member.email or "").split("@")[0].lower()
 
         for repo in self._repos:
             commits = await self._get(

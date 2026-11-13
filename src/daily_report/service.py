@@ -57,6 +57,7 @@ def build_service(settings: Settings | None = None) -> PipelineService:
                 token=settings.github_token,
                 repos=settings.github_repo_list,
                 api_base=settings.github_api_base,
+                login=settings.github_login,
             )
         )
     provider = (

@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     github_token: str = Field(default="", alias="GITHUB_TOKEN")
     github_api_base: str = Field(default="https://api.github.com", alias="GITHUB_API_BASE")
     github_repos: str = Field(default="", alias="GITHUB_REPOS")
+    github_login: str = Field(default="", alias="GITHUB_LOGIN")
 
     smtp_host: str = Field(default="", alias="SMTP_HOST")
     smtp_port: int = Field(default=587, alias="SMTP_PORT")
