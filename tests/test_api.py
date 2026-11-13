@@ -140,7 +140,20 @@ def test_feishu_login_url_contains_redirect(
     assert "redirect_uri=http%3A%2F%2Flocalhost%3A8000" in body["url"]
 
 
-def test_feishu_callback_redirects_to_frontend(
+def test_feishu_callback_redirects_with_web_state(
+    service: PipelineService, settings: Settings, seeded: tuple[int, int]
+) -> None:
+    client = TestClient(create_app(service, settings))
+    response = client.get(
+        "/api/oauth/feishu/callback",
+        params={"code": "ou_1", "state": "web:abc123"},
+        follow_redirects=False,
+    )
+    assert response.status_code == 303
+    assert response.headers["location"].startswith("http://localhost:5173/login?token=")
+
+
+def test_feishu_callback_redirects_with_query_flag(
     service: PipelineService, settings: Settings, seeded: tuple[int, int]
 ) -> None:
     client = TestClient(create_app(service, settings))
@@ -150,6 +163,4 @@ def test_feishu_callback_redirects_to_frontend(
         follow_redirects=False,
     )
     assert response.status_code == 303
-    location = response.headers["location"]
-    assert location.startswith("http://localhost:5173/login?token=")
-    assert "name=" in location
+    assert "name=" in response.headers["location"]

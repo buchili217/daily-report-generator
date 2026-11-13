@@ -49,7 +49,24 @@ class FeishuApi:
             headers={"Authorization": f"Bearer {app_token}"},
         )
         body = self._handle(response)
-        return body.get("data", {})
+        data = body.get("data", {})
+        user_token = data.get("access_token")
+        if not user_token:
+            raise AppError(ErrorCode.COL_AUTH, "user access_token missing")
+
+        info_response = await self._http.get(
+            f"{self._base_url}/open-apis/authen/v1/user_info",
+            headers={"Authorization": f"Bearer {user_token}"},
+        )
+        info = self._handle(info_response).get("data", {})
+        open_id = info.get("open_id")
+        if not open_id:
+            raise AppError(ErrorCode.COL_AUTH, "user info missing open_id")
+        return {
+            "open_id": open_id,
+            "name": info.get("name") or info.get("en_name") or open_id,
+            "email": info.get("email") or info.get("enterprise_email"),
+        }
 
     async def app_access_token(self) -> str:
         response = await self._http.post(

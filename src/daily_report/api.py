@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from daily_report.audit import AuditService
 from daily_report.auth import create_session_token, decode_session_token
 from daily_report.config import Settings, get_settings
+from daily_report.errors import AppError
 from daily_report.generation.builder import SECTIONS
 from daily_report.http import HttpClient, make_client
 from daily_report.pipeline import PipelineService
@@ -135,7 +136,7 @@ def create_app(
     def feishu_login_url() -> dict:
         if not settings.feishu_app_id:
             raise HTTPException(status_code=422, detail="FEISHU_APP_ID 未配置")
-        state = secrets.token_urlsafe(8)
+        state = f"web:{secrets.token_urlsafe(8)}"
         url = (
             f"{settings.feishu_api_base}/open-apis/authen/v1/authorize"
             f"?app_id={quote(settings.feishu_app_id)}"
@@ -148,6 +149,7 @@ def create_app(
     async def feishu_callback(
         code: str,
         redirect: bool = False,
+        state: str = "",
         session: Session = Depends(get_session),
     ) -> Response:
         if settings.mock_mode:
@@ -156,14 +158,17 @@ def create_app(
             http = HttpClient(make_client(timeout=10))
             from daily_report.feishu_api import FeishuApi
 
-            async with http.client:
-                api = FeishuApi(
-                    http,
-                    app_id=settings.feishu_app_id,
-                    app_secret=settings.feishu_app_secret,
-                    base_url=settings.feishu_api_base,
-                )
-                data = await api.exchange_code(code)
+            try:
+                async with http.client:
+                    api = FeishuApi(
+                        http,
+                        app_id=settings.feishu_app_id,
+                        app_secret=settings.feishu_app_secret,
+                        base_url=settings.feishu_api_base,
+                    )
+                    data = await api.exchange_code(code)
+            except AppError as exc:
+                raise HTTPException(status_code=401, detail=str(exc)) from exc
             candidate = data.get("open_id")
             if not candidate:
                 raise HTTPException(status_code=401, detail="feishu exchange failed")
@@ -176,7 +181,7 @@ def create_app(
             open_id=open_id, name=name, email=email
         )
         token = create_session_token(member.id, settings.app_secret_key)
-        if redirect:
+        if redirect or state.startswith("web:"):
             target = (
                 f"{settings.frontend_base_url.rstrip('/')}/login"
                 f"?token={quote(token)}&name={quote(member.name)}"
