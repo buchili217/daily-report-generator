@@ -1,0 +1,120 @@
+@startuml class
+top to bottom direction
+skinparam defaultFontName "Microsoft YaHei"
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+hide circle
+hide empty members
+
+package "主编排入口" {
+  class PipelineService {
+    + run_member_pipeline(member_id, date): PipelineResult
+    + run_daily_pipeline(date, team_id): PipelineRunResult
+    + run_team_rollup(team_id, date): TeamDigest
+  }
+  class ReportService {
+    + get_report(date): Report
+    + update_items(report_id, items): Report
+    + submit_report(report_id, actor_id): Report
+  }
+  class Scheduler {
+    + schedule_daily(): None
+  }
+}
+
+package "采集层" {
+  interface Collector {
+    + source: str
+    + collect(member, window): CollectResult
+  }
+  class GitHubCollector
+  class FeishuCalendarCollector
+  class FeishuDocCollector
+  class FeishuTaskCollector
+  class CollectResult {
+    + events: list[WorkEvent]
+    + next_cursor: str
+    + errors: list[CollectError]
+  }
+  class WorkEvent {
+    + source: str
+    + source_id: str
+    + event_type: str
+    + occurred_at: datetime
+    + title: str
+    + confidence: float
+    + payload: dict
+  }
+}
+
+package "生成层" {
+  class Aggregator {
+    + aggregate(member, results): list[WorkEvent]
+  }
+  class AttributionEngine {
+    + attribute(events): AttributionResult
+  }
+  class ReportBuilder {
+    + build_report(member, events, provider, template): ReportDraft
+  }
+  interface LLMProvider {
+    + generate(prompt, schema, timeout): str
+  }
+  class DeepSeekProvider
+  class FakeProvider
+  class DraftValidator {
+    + validate(draft): ValidationResult
+  }
+}
+
+package "推送层" {
+  interface Publisher {
+    + channel: str
+    + publish(payload, idempotency_key): PushResult
+  }
+  class FeishuPublisher
+  class EmailPublisher
+  class PushPayload {
+    + title: str
+    + content_md: str
+    + report_id: int
+    + target_type: str
+    + target_id: str
+  }
+}
+
+package "共享基础" {
+  class ReportRepository
+  class WorkEventRepository
+  class PushRecordRepository
+  class AuditService
+}
+
+GitHubCollector ..|> Collector
+FeishuCalendarCollector ..|> Collector
+FeishuDocCollector ..|> Collector
+FeishuTaskCollector ..|> Collector
+DeepSeekProvider ..|> LLMProvider
+FakeProvider ..|> LLMProvider
+FeishuPublisher ..|> Publisher
+EmailPublisher ..|> Publisher
+
+Collector ..> CollectResult
+CollectResult o-- WorkEvent
+PipelineService --> Collector
+PipelineService --> Aggregator
+PipelineService --> AttributionEngine
+PipelineService --> ReportBuilder
+PipelineService --> DraftValidator
+PipelineService --> Publisher
+PipelineService --> ReportRepository
+ReportBuilder --> LLMProvider
+ReportBuilder ..> WorkEvent
+AttributionEngine ..> WorkEvent
+ReportService --> ReportRepository
+ReportService --> AuditService
+Publisher ..> PushPayload
+Publisher ..> PushResult
+PipelineService --> PushRecordRepository
+Aggregator --> WorkEventRepository
+@enduml

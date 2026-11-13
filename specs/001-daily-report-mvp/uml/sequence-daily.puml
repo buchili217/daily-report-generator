@@ -1,0 +1,59 @@
+@startuml sequence-daily
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam sequenceMessageAlign left
+autonumber
+
+actor "定时调度\n(Celery Beat)" as Sched
+participant "PipelineService\n(主编排)" as Pipe
+participant "Collectors\n(飞书/GitHub)" as Col
+participant "Aggregator /\nAttributionEngine" as Agg
+participant "ReportBuilder" as Builder
+participant "LLMProvider" as LLM
+participant "DraftValidator" as Val
+database "SQLite" as DB
+participant "FeishuPublisher" as Push
+participant "飞书开放平台" as Feishu
+participant "GitHub API" as GitHub
+
+Sched -> Pipe : run_daily_pipeline(date)
+Pipe -> DB : 查询团队与成员 / 检查 run_key
+Pipe -> DB : 创建 pipeline_run(running)
+
+loop 每个成员
+  Pipe -> Col : collect(member, window)
+  activate Col
+  Col -> Feishu : 日历 / 文档 / 任务
+  Col -> GitHub : commit / PR
+  Col --> Pipe : CollectResult(events, cursor)
+  deactivate Col
+
+  Pipe -> Agg : aggregate + attribute
+  Agg --> Pipe : 归属事件(含置信度)
+
+  Pipe -> Builder : build_report(member, events)
+  Builder -> LLM : generate(prompt, schema)
+  alt 模型正常
+    LLM --> Builder : JSON 草稿
+  else 超时 / 限流 / 非法输出
+    LLM --> Builder : 错误
+    Builder -> Builder : 降级为事实模板
+  end
+
+  Pipe -> Val : validate_draft(draft)
+  alt 存在无来源条目
+    Val --> Pipe : 剔除条目 + 告警
+  else 校验通过
+    Val --> Pipe : 通过
+  end
+
+  Pipe -> DB : 保存 report / report_item / report_version
+  Pipe -> Push : publish(payload, idempotency_key)
+  Push -> Feishu : 发送个人卡片
+  Feishu --> Push : msg_id / 错误
+  Push -> DB : 写 push_record(sent/failed)
+end
+
+Pipe -> DB : 更新 pipeline_run(success/partial)
+Pipe --> Sched : PipelineRunResult
+@enduml

@@ -1,0 +1,147 @@
+@startuml er
+!pragma layout smetana
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam linetype ortho
+hide circle
+
+entity "member" as member {
+  * id : INTEGER <<PK>>
+  --
+  * open_id : TEXT <<UQ>>
+  * name : TEXT
+  email : TEXT
+  dept : TEXT
+  * status : TEXT
+  * created_at : TEXT
+}
+
+entity "team" as team {
+  * id : INTEGER <<PK>>
+  --
+  * name : TEXT <<UQ>>
+  lead_member_id : INTEGER <<FK>>
+  * created_at : TEXT
+}
+
+entity "team_member" as team_member {
+  * team_id : INTEGER <<PK,FK>>
+  * member_id : INTEGER <<PK,FK>>
+  * role : TEXT
+}
+
+entity "work_event" as work_event {
+  * id : INTEGER <<PK>>
+  --
+  * source : TEXT
+  * source_id : TEXT
+  * event_type : TEXT
+  owner_member_id : INTEGER <<FK>>
+  * occurred_at : TEXT
+  * title : TEXT
+  summary : TEXT
+  url : TEXT
+  * confidence : REAL
+  * payload_json : TEXT
+  * collected_at : TEXT
+}
+
+entity "event_participant" as event_participant {
+  * event_id : INTEGER <<PK,FK>>
+  * member_id : INTEGER <<PK,FK>>
+  * role : TEXT <<PK>>
+  * confidence : REAL
+}
+
+entity "report" as report {
+  * id : INTEGER <<PK>>
+  --
+  * member_id : INTEGER <<FK>>
+  * report_date : TEXT
+  * status : TEXT
+  * template_version : TEXT
+  * version : INTEGER
+  generated_at : TEXT
+  submitted_at : TEXT
+  pushed_at : TEXT
+}
+
+entity "report_item" as report_item {
+  * id : INTEGER <<PK>>
+  --
+  * report_id : INTEGER <<FK>>
+  * section : TEXT
+  * content : TEXT
+  * source_event_ids : TEXT
+  * confidence : REAL
+  * confirmed : INTEGER
+  * sort_order : INTEGER
+}
+
+entity "report_version" as report_version {
+  * id : INTEGER <<PK>>
+  --
+  * report_id : INTEGER <<FK>>
+  * version : INTEGER
+  * snapshot_json : TEXT
+  * created_at : TEXT
+}
+
+entity "push_record" as push_record {
+  * id : INTEGER <<PK>>
+  --
+  * report_id : INTEGER <<FK>>
+  * channel : TEXT
+  * target_type : TEXT
+  * target_id : TEXT
+  * status : TEXT
+  * retry_count : INTEGER
+  provider_msg_id : TEXT
+  error : TEXT
+  pushed_at : TEXT
+}
+
+entity "sync_cursor" as sync_cursor {
+  * id : INTEGER <<PK>>
+  --
+  * source : TEXT
+  * scope_key : TEXT
+  cursor_value : TEXT
+  etag : TEXT
+  last_synced_at : TEXT
+}
+
+entity "pipeline_run" as pipeline_run {
+  * id : INTEGER <<PK>>
+  --
+  * run_key : TEXT <<UQ>>
+  * run_date : TEXT
+  * status : TEXT
+  * stats_json : TEXT
+  * started_at : TEXT
+  finished_at : TEXT
+}
+
+entity "audit_log" as audit_log {
+  * id : INTEGER <<PK>>
+  --
+  actor_id : INTEGER
+  * action : TEXT
+  * object_type : TEXT
+  object_id : TEXT
+  * result : TEXT
+  ip : TEXT
+  * detail_json : TEXT
+  * created_at : TEXT
+}
+
+team ||--o{ team_member
+member ||--o{ team_member
+member ||--o{ work_event : "owner"
+work_event ||--o{ event_participant
+member ||--o{ event_participant
+member ||--o{ report
+report ||--o{ report_item
+report ||--o{ report_version
+report ||--o{ push_record
+@enduml

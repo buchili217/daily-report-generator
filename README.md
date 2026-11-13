@@ -20,14 +20,81 @@
 ```
 .
 ├── docs/                 # 课程设计文档与调研资料
-├── specs/                # SDD 规格：spec / plan / tasks
-│   └── 000-template/     # 模板
+├── specs/                # SDD 规格：proposal / design / tasks
+│   ├── 000-template/     # 模板
+│   └── 001-daily-report-mvp/  # v1 规格与 UML 附件
+├── src/daily_report/     # v1 源码（采集/生成/推送/编排）
+├── web/                  # Vue 3 + TypeScript 管理端
+├── tests/                # 单元与集成测试
+├── migrations/           # Alembic 迁移
 ├── docker-compose.yml    # 本地开发环境（Redis）
 ├── data/                 # SQLite 数据库文件（不入库）
 ├── proposal.md           # 项目提案
 ├── README.md
 └── CONTRIBUTING.md       # 分支、提交与 PR 规范
 ```
+
+## 快速开始（Mock 模式，无需凭证）
+
+```bash
+export UV_CACHE_DIR=D:/uv-cache
+uv sync --dev
+
+export APP_SECRET_KEY=demo-secret
+export MOCK_MODE=true
+
+uv run python -m daily_report init-db
+uv run python -m daily_report seed-demo
+uv run python -m daily_report run --date 2026-11-11
+```
+
+流水线会完成 采集 → 生成 → 推送，并在 `data/daily_report.db` 写入日报、条目与推送记录；重复执行返回 `skipped`（幂等）。
+
+完整演示步骤见 [docs/演示脚本.md](docs/演示脚本.md)。
+
+## 质量门禁
+
+```bash
+uv run ruff check .
+uv run mypy src
+uv run pytest -q
+```
+
+## 管理端（Vue 3 + TypeScript）
+
+PowerShell（Windows 默认）：
+
+```powershell
+# 终端 1：后端（Mock 模式）
+$env:APP_SECRET_KEY = "demo-secret"
+$env:MOCK_MODE = "true"
+uv run python -m daily_report serve
+
+# 终端 2：前端
+cd web
+npm install
+npm run dev
+```
+
+bash / Git Bash / macOS / Linux：
+
+```bash
+export APP_SECRET_KEY=demo-secret MOCK_MODE=true
+uv run python -m daily_report serve
+
+cd web
+npm install
+npm run dev
+```
+
+> 端口 8000 已被占用时（`winerror 10048`），说明后端已在运行，直接用现有实例即可；需要重启时先结束占用进程：`Get-NetTCPConnection -LocalPort 8000 | Select-Object -ExpandProperty OwningProcess | ForEach-Object { Stop-Process -Id $_ -Force }`。
+
+打开 `http://localhost:5173`，用 `ou_1`（张三）或 `ou_2`（李四）登录。页面能力：
+
+- **我的日报**：按日期查看草稿、生成当日日报、编辑四个段落、保存、提交、推送；
+- **团队汇总**：负责人选择团队与日期，查看汇总（不含排名）。
+
+生产构建：`cd web && npm run build`，产物在 `web/dist/`，可用 Nginx 托管并反向代理 `/api` 到后端。
 
 ## 本地启动
 
@@ -60,6 +127,11 @@ sqlite3 data/daily_report.db
 | [docs/业务调研报告.md](docs/业务调研报告.md) | 市场、用户、竞品与可行性 |
 | [docs/架构与技术栈选型.md](docs/架构与技术栈选型.md) | 架构方案与技术栈对比 |
 | [specs/README.md](specs/README.md) | 规格目录与 SDD 流程说明 |
+| [specs/001-daily-report-mvp/design.md](specs/001-daily-report-mvp/design.md) | v1 系统设计、数据模型、接口契约与 ADR |
+| [specs/001-daily-report-mvp/tasks.md](specs/001-daily-report-mvp/tasks.md) | v1 任务清单与验收标准 |
+| [docs/演示脚本.md](docs/演示脚本.md) | v1 Mock 模式演示步骤 |
+| [docs/验收核对表.md](docs/验收核对表.md) | proposal 成功标准逐条核对 |
+| [docs/验收测试代理.md](docs/验收测试代理.md) | 验收测试子代理的流程与判定规则 |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | 协作规范 |
 
 ## 协作

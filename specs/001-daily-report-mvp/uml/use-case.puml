@@ -1,0 +1,79 @@
+@startuml use-case
+!pragma layout smetana
+left to right direction
+skinparam defaultFontName "Microsoft YaHei"
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #F7FBFF
+  BorderColor #3B6EA5
+}
+
+actor "一线员工" as Emp
+actor "团队负责人" as Lead
+actor "部门/HR 管理者" as HR
+actor "系统管理员" as Admin
+actor "定时调度" as Scheduler <<system>>
+actor "飞书开放平台" as Feishu <<external>>
+actor "GitHub API" as GitHub <<external>>
+
+rectangle "智能日报生成器 v1" {
+  usecase "飞书登录与授权" as UC01
+  usecase "查看采集预览" as UC02
+  usecase "编辑日报草稿" as UC03
+  usecase "确认并提交日报" as UC04
+  usecase "撤回/修改日报" as UC05
+  usecase "设置字段开关" as UC06
+  usecase "导出本人数据" as UC07
+
+  usecase "采集工作数据" as UC08
+  usecase "采集飞书日历" as UC09
+  usecase "采集飞书云文档" as UC10
+  usecase "采集飞书任务" as UC11
+  usecase "采集 GitHub 提交与 PR" as UC12
+
+  usecase "生成日报草稿" as UC13
+  usecase "协作成果归属" as UC14
+  usecase "来源校验与降级" as UC15
+
+  usecase "推送日报" as UC16
+  usecase "查看团队日报汇总" as UC17
+  usecase "标记阻塞项" as UC18
+  usecase "导出/归档日报" as UC19
+  usecase "查看审计日志" as UC20
+  usecase "配置采集源与模板" as UC21
+}
+
+Emp --> UC01
+Emp --> UC02
+Emp --> UC03
+Emp --> UC04
+Emp --> UC05
+Emp --> UC06
+Emp --> UC07
+
+Scheduler --> UC08
+Scheduler --> UC13
+Scheduler --> UC16
+
+UC08 ..> UC09 : <<include>>
+UC08 ..> UC10 : <<include>>
+UC08 ..> UC11 : <<include>>
+UC08 ..> UC12 : <<include>>
+
+UC13 ..> UC08 : <<include>>
+UC13 ..> UC14 : <<include>>
+UC13 ..> UC15 : <<include>>
+
+Lead --> UC17
+Lead --> UC18
+HR --> UC19
+Admin --> UC20
+Admin --> UC21
+
+UC09 --> Feishu
+UC10 --> Feishu
+UC11 --> Feishu
+UC16 --> Feishu
+UC12 --> GitHub
+@enduml

@@ -1,0 +1,104 @@
+:root {
+  --brand: #3b6ea5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+  background: #f5f7fa;
+  color: #1f2d3d;
+}
+
+.layout {
+  min-height: 100vh;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  background: #fff;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.brand {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--brand);
+  white-space: nowrap;
+}
+
+.nav {
+  flex: 1;
+  border-bottom: none;
+}
+
+.user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #606266;
+}
+
+.page {
+  max-width: 1080px;
+  margin: 0 auto;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-card {
+  margin-bottom: 16px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.item-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.meta {
+  color: #909399;
+  font-size: 12px;
+}
+
+.empty {
+  padding: 48px 0;
+  text-align: center;
+  color: #909399;
+}
+
+.digest {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  font-family: inherit;
+  margin: 0;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-card {
+  width: 420px;
+}
