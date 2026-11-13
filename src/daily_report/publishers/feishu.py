@@ -40,6 +40,7 @@ class FeishuPublisher:
             return PushResult(
                 success=False,
                 error_code=code.value,
+                error_message=str(exc),
                 retryable=exc.retryable,
             )
         message_id = (body.get("data") or {}).get("message_id")

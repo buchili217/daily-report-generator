@@ -25,6 +25,7 @@ class PushResult:
     success: bool
     provider_msg_id: str | None = None
     error_code: str | None = None
+    error_message: str | None = None
     retryable: bool = False
 
 
@@ -72,5 +73,5 @@ async def deliver(
     if result.success:
         records.mark_sent(record, result.provider_msg_id)
     else:
-        records.mark_failed(record, result.error_code or "push failed")
+        records.mark_failed(record, result.error_message or result.error_code or "push failed")
     return result
