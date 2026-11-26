@@ -97,13 +97,37 @@ class FeishuApi:
         return self._handle(response)
 
     def _handle(self, response) -> dict[str, Any]:
-        if response.status_code in (401, 403):
-            raise AppError(ErrorCode.COL_AUTH, f"feishu unauthorized: {response.status_code}")
-        if response.status_code == 429:
-            raise AppError(ErrorCode.COL_RATE_LIMITED, "feishu rate limited", retryable=True)
         if response.status_code >= 400:
-            raise AppError(ErrorCode.COL_TIMEOUT, f"feishu upstream error: {response.status_code}")
+            body: dict[str, Any] = {}
+            try:
+                parsed = response.json()
+                if isinstance(parsed, dict):
+                    body = parsed
+            except ValueError:
+                body = {}
+            detail = str(body.get("msg") or body.get("message") or "")[:200]
+            suffix = f" ({body.get('code')}: {detail})" if detail else ""
+            if response.status_code in (401, 403) or body.get("code") in {
+                99991672,
+                99991663,
+                99991661,
+            }:
+                raise AppError(
+                    ErrorCode.COL_AUTH,
+                    f"feishu unauthorized: {response.status_code}{suffix}",
+                )
+            if response.status_code == 429:
+                raise AppError(
+                    ErrorCode.COL_RATE_LIMITED, f"feishu rate limited{suffix}", retryable=True
+                )
+            raise AppError(
+                ErrorCode.COL_TIMEOUT,
+                f"feishu upstream error: {response.status_code}{suffix}",
+                retryable=response.status_code >= 500,
+            )
         body = response.json()
         if body.get("code") not in (0, None):
-            raise AppError(ErrorCode.COL_AUTH, f"feishu error: {body.get('msg')}")
+            raise AppError(
+                ErrorCode.COL_AUTH, f"feishu error: {body.get('code')} {body.get('msg')}"
+            )
         return body

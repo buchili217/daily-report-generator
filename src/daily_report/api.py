@@ -275,7 +275,9 @@ def create_app(
             idempotency_key=f"push:{report.id}:{report.version}",
         )
         if not result.success:
-            raise HTTPException(status_code=502, detail=result.error_code or "push failed")
+            session.commit()
+            detail = result.error_message or result.error_code or "push failed"
+            raise HTTPException(status_code=502, detail=detail)
         repo.set_status(report, "pushed")
         AuditService(session).log(
             action="push_report", object_type="report", actor_id=member_id, object_id=report.id

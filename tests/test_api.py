@@ -8,7 +8,10 @@ from fastapi.testclient import TestClient
 from daily_report.api import create_app
 from daily_report.auth import create_session_token
 from daily_report.config import Settings
+from daily_report.db import Database
 from daily_report.pipeline import PipelineService
+from daily_report.publishers.base import PushResult
+from daily_report.repositories import PushRecordRepository, ReportRepository
 
 DAY = date(2026, 11, 11)
 
@@ -164,3 +167,43 @@ def test_feishu_callback_redirects_with_query_flag(
     )
     assert response.status_code == 303
     assert "name=" in response.headers["location"]
+
+
+class _FailingPublisher:
+    channel = "feishu"
+
+    async def publish(self, payload, idempotency_key):
+        return PushResult(
+            success=False,
+            error_code="E-PUSH-001",
+            error_message="feishu unauthorized: 400 (99991672: im:message:send_as_bot)",
+        )
+
+
+def test_push_failure_persists_record_and_detail(
+    database: Database, settings: Settings, seeded: tuple[int, int]
+) -> None:
+    member_id, _ = seeded
+    with database.session() as session:
+        reports = ReportRepository(session)
+        report = reports.ensure(member_id, "2026-11-16")
+        reports.replace_items(
+            report,
+            [{"section": "done", "content": "完成接口", "source_event_ids": [1]}],
+        )
+        reports.set_status(report, "submitted")
+        report_id = report.id
+
+    service = PipelineService(database, [], _FailingPublisher())
+    client = TestClient(create_app(service, settings))
+    response = client.post(
+        f"/api/reports/{report_id}/push", headers=_auth(member_id, settings)
+    )
+    assert response.status_code == 502
+    assert "99991672" in response.json()["detail"]
+
+    with database.session() as session:
+        record = PushRecordRepository(session).get(report_id, "feishu", "user", "ou_1")
+        assert record is not None
+        assert record.status == "failed"
+        assert "99991672" in (record.error or "")

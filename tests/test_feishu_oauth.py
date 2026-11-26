@@ -14,8 +14,15 @@ def _api(handler) -> tuple[HttpClient, FeishuApi]:
 
 
 def _token(request: httpx.Request) -> httpx.Response | None:
-    if request.url.path.endswith("app_access_token/internal"):
-        return httpx.Response(200, json={"code": 0, "app_access_token": "app-token"})
+    if request.url.path.endswith(("app_access_token/internal", "tenant_access_token/internal")):
+        return httpx.Response(
+            200,
+            json={
+                "code": 0,
+                "app_access_token": "app-token",
+                "tenant_access_token": "tenant-token",
+            },
+        )
     return None
 
 
@@ -60,3 +67,25 @@ async def test_exchange_code_without_user_token_raises() -> None:
         with pytest.raises(AppError) as exc:
             await api.exchange_code("code-2")
     assert exc.value.code == ErrorCode.COL_AUTH
+
+
+async def test_permission_error_includes_scope_hint() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        token = _token(request)
+        if token:
+            return token
+        return httpx.Response(
+            400,
+            json={
+                "code": 99991672,
+                "msg": "Access denied. One of the following scopes is required: [im:message:send]",
+            },
+        )
+
+    http, api = _api(handler)
+    async with http.client:
+        with pytest.raises(AppError) as exc:
+            await api.post("/open-apis/im/v1/messages", {})
+    assert exc.value.code == ErrorCode.COL_AUTH
+    assert "im:message" in str(exc.value)
+    assert "99991672" in str(exc.value)

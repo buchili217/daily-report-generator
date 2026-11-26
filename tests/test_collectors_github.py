@@ -15,7 +15,7 @@ WINDOW = TimeWindow(datetime(2026, 11, 11), datetime(2026, 11, 12))
 MEMBER = Member(id=1, open_id="ou_1", name="张三", email="zhangsan@example.com")
 
 
-def _collector(handler, etags=None) -> tuple[HttpClient, GitHubCollector]:
+def _collector(handler, etags=None, login: str = "") -> tuple[HttpClient, GitHubCollector]:
     http = HttpClient(make_client(transport=httpx.MockTransport(handler)))
     return http, GitHubCollector(
         http,
@@ -23,6 +23,7 @@ def _collector(handler, etags=None) -> tuple[HttpClient, GitHubCollector]:
         repos=["org/repo"],
         api_base="https://github.test",
         etags=etags,
+        login=login,
     )
 
 
@@ -111,3 +112,25 @@ async def test_unauthorized_raises() -> None:
         with pytest.raises(AppError) as exc:
             await collector.collect(MEMBER, WINDOW)
     assert exc.value.code == ErrorCode.COL_AUTH
+
+
+async def test_explicit_login_matches_pr_author() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/commits"):
+            return httpx.Response(200, json=[])
+        return httpx.Response(
+            200,
+            json=[
+                {
+                    "number": 9,
+                    "title": "feat: pr",
+                    "user": {"login": "buchili217"},
+                    "updated_at": "2026-11-11T10:00:00Z",
+                }
+            ],
+        )
+
+    http, collector = _collector(handler, login="buchili217")
+    async with http.client:
+        result = await collector.collect(MEMBER, WINDOW)
+    assert [event.source_id for event in result.events] == ["org/repo#9"]
