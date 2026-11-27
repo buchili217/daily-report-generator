@@ -38,6 +38,10 @@ async def test_calendar_collector_parses_events() -> None:
         early = _token(request)
         if early:
             return early
+        start = int(request.url.params["start_time"])
+        end = int(request.url.params["end_time"])
+        assert end - start == 86_400_000
+        assert len(str(start)) == 13
         return httpx.Response(
             200,
             json={

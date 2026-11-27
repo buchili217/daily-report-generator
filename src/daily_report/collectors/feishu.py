@@ -45,8 +45,8 @@ class FeishuCalendarCollector:
         body = await self._api.get(
             "/open-apis/calendar/v4/calendars/primary/events",
             params={
-                "start_time": int(window.since.timestamp()),
-                "end_time": int(window.until.timestamp()),
+                "start_time": int(window.since.timestamp() * 1000),
+                "end_time": int(window.until.timestamp() * 1000),
                 "page_size": 100,
             },
         )

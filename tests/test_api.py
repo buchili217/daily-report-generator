@@ -169,6 +169,30 @@ def test_feishu_callback_redirects_with_query_flag(
     assert "name=" in response.headers["location"]
 
 
+def test_resubmit_after_reset_increments_version(
+    database: Database, settings: Settings, seeded: tuple[int, int]
+) -> None:
+    member_id, _ = seeded
+    with database.session() as session:
+        reports = ReportRepository(session)
+        report = reports.ensure(member_id, "2026-11-17")
+        reports.replace_items(
+            report, [{"section": "done", "content": "完成接口", "source_event_ids": [1]}]
+        )
+        reports.add_version(report, {"version": 1})
+        reports.set_status(report, "submitted")
+        report.status = "draft"
+        report_id = report.id
+
+    service = PipelineService(database, [], _FailingPublisher())
+    client = TestClient(create_app(service, settings))
+    response = client.post(
+        f"/api/reports/{report_id}/submit", headers=_auth(member_id, settings)
+    )
+    assert response.status_code == 200
+    assert response.json()["version"] == 2
+
+
 class _FailingPublisher:
     channel = "feishu"
 

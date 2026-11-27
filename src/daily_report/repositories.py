@@ -7,7 +7,7 @@ from collections.abc import Iterable, Mapping
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from daily_report.models import (
@@ -207,14 +207,19 @@ class ReportRepository:
         )
 
     def add_version(self, report: Report, snapshot: Mapping[str, Any]) -> ReportVersion:
-        version = ReportVersion(
+        latest = self.session.scalar(
+            select(func.max(ReportVersion.version)).where(ReportVersion.report_id == report.id)
+        ) or 0
+        version = max(int(latest) + 1, report.version)
+        record = ReportVersion(
             report_id=report.id,
-            version=report.version,
+            version=version,
             snapshot_json=json.dumps(snapshot, ensure_ascii=False),
         )
-        self.session.add(version)
+        report.version = version
+        self.session.add(record)
         self.session.flush()
-        return version
+        return record
 
     def set_status(self, report: Report, status: str) -> None:
         report.status = status
