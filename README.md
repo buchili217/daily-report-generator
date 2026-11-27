@@ -127,6 +127,7 @@ sqlite3 data/daily_report.db
 | [docs/业务调研报告.md](docs/业务调研报告.md) | 市场、用户、竞品与可行性 |
 | [docs/架构与技术栈选型.md](docs/架构与技术栈选型.md) | 架构方案与技术栈对比 |
 | [specs/README.md](specs/README.md) | 规格目录与 SDD 流程说明 |
+| [specs/001-daily-report-mvp/proposal.md](specs/001-daily-report-mvp/proposal.md) | v1 范围、成功标准与开放问题 |
 | [specs/001-daily-report-mvp/design.md](specs/001-daily-report-mvp/design.md) | v1 系统设计、数据模型、接口契约与 ADR |
 | [specs/001-daily-report-mvp/tasks.md](specs/001-daily-report-mvp/tasks.md) | v1 任务清单与验收标准 |
 | [docs/演示脚本.md](docs/演示脚本.md) | v1 Mock 模式演示步骤 |
